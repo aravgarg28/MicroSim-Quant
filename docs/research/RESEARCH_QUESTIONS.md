@@ -44,6 +44,12 @@ crosses the scale of the market's quote-update tempo.
   per decade of latency." Plus the mechanism evidence (race counts).
 - **NOT justified:** any claim about real venue latency economics; extrapolation beyond the
   swept range; "colocation is worth $X".
+- **Known validity bound (AR-3):** under stage-2 Poisson flow, adverse selection is purely
+  *mechanical* (random bursts run over stale quotes) — there is no informed counterparty.
+  H1's markout effects are therefore expected to be real but flat across horizons beyond the
+  race timescale; the R5 replication under informed flow (stage-3 + informed trader) tests
+  whether the latency effect *amplifies* with informational toxicity. The MVP finding is
+  reported with this bound stated in its headline paragraph, not a footnote.
 
 ## RQ2 — When does inventory-skewed quoting beat fixed-spread quoting?
 
