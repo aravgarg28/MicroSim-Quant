@@ -194,7 +194,9 @@ Format: ID · Date · Decision · Alternatives considered · Rationale · Status
   1 lands with CI green, so first impressions include working code.
 - **Status:** OPEN — owner decision.
 
-### O2 — License
-- Recommendation: **MIT** (maximally permissive, recruiter-familiar, no obligations).
-  Alternatives: Apache-2.0 (patent grant, longer), BSD-3.
-- **Status:** OPEN — owner approval requested at CP1 review.
+### ~~O2~~ D14 — License: MIT
+- **Date:** 2026-07-12
+- **Alternatives:** Apache-2.0 (patent grant, longer), BSD-3.
+- **Rationale:** Maximally permissive, recruiter-familiar, no obligations. Owner approved at
+  CP1 review; `LICENSE` added at repo root.
+- **Status:** LOCKED (owner choice).
