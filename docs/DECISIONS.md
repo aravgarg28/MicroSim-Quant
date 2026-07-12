@@ -127,6 +127,26 @@ Format: ID · Date · Decision · Alternatives considered · Rationale · Status
   dashboard work is gated behind Release 5 completion.
 - **Status:** LOCKED (owner choice).
 
+### D15 — Exchange-rule judgment calls (CP2)
+- **Date:** 2026-07-12
+- **Decisions made while writing `docs/domain/EXCHANGE_RULES.md`** (delegated authority, most
+  significant listed):
+  1. **Fees are flat per-lot integers** (futures-style), not basis points of notional
+     (equities-style). Rationale: exact integer arithmetic, zero rounding rules, INV-11(b)
+     reconciliation stays exact. Bps fees documented as an extension.
+  2. **Market-order remainder is canceled (`NO_LIQUIDITY`), never rests**; a market order into
+     an empty opposite side is accepted then canceled with zero fills (uniform event flow,
+     deterministic, testable).
+  3. **Modify semantics:** price change or quantity increase loses time priority; quantity
+     decrease keeps it; modify-to-≤-filled cancels remainder. Mirrors common exchange practice
+     (e.g. CME-style cancel/replace) and makes queue-priority rules testable.
+  4. **Self-trades are permitted in Release 1**; Release 2 adds per-participant STP with
+     `CANCEL_NEWEST` default for strategies. Keeps R1 matching minimal.
+  5. **Risk position check uses worst-case exposure** (position + same-side open + new order),
+     not fill-optimistic. Conservative, deterministic, standard practice.
+  6. **No IOC/FOK in MVP** — DAY-resting limits and immediate markets only.
+- **Status:** LOCKED (delegated to the maintainer; owner may reopen any item at CP2 review).
+
 ---
 
 ## Technology-stack decisions
