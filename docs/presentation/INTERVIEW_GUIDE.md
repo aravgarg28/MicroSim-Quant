@@ -141,4 +141,8 @@ for. Never bluff a doc you haven't re-read.)
 
 Week 1: primer + exchange rules + this guide, out loud. Week 2: order-book + clock +
 threading docs; whiteboard the book from memory. Week 3: research trio + findings; re-derive
-one CI. Ongoing: after every real interview, add the questions you got to this doc.
+one CI. Week 4 (AR-1, non-optional): **hand-write a toy price-time order book yourself** —
+~150 lines, map + lists, limit/market/cancel — without looking at the repo, then diff against
+ReferenceBook. Interviewers *will* ask you to code book operations live; having done it once
+by hand is the difference between explaining your project and performing it. Ongoing: after
+every real interview, add the questions you got to this doc.

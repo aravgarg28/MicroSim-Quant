@@ -41,7 +41,9 @@ operational counterpart of RESEARCH_QUESTIONS.md.
 ## Analysis protocol
 
 - **Estimates:** per-arm means/medians with bootstrap 95% CIs over seeds (10⁴ resamples,
-  BCa where stable, percentile otherwise).
+  BCa where stable, percentile otherwise). Seed-level scatter (strip/violin) is shown for
+  every headline comparison — summary statistics never appear without their underlying
+  distribution (AR-4).
 - **Tests:** as pre-registered per RQ (paired Wilcoxon primary, paired t sensitivity, trend
   tests, survival methods for RQ3). Family-wise Holm correction as specified there.
 - **Economic vs statistical significance:** every reported effect carries units a trader

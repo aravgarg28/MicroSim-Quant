@@ -204,6 +204,24 @@ Format: ID · Date · Decision · Alternatives considered · Rationale · Status
   for contributors and for local Linux-tool access, but no workflow requires it.
 - **Status:** LOCKED.
 
+### D16 — Rolling-wave task detailing
+- **Date:** 2026-07-12
+- **Decision:** Only the in-progress release's tasks are specified at full template depth
+  (R1 now); later releases stay at title/epic level until their release starts.
+- **Rationale:** Fully detailing R4+ tasks before R1 code exists would fossilize guesses and
+  guarantee spec-vs-reality drift; the roadmap + epics carry the commitments, the task
+  expansion carries the precision, each at the right time.
+- **Status:** LOCKED (delegated to Fable).
+
+### D17 — Adversarial-review revisions (AR-1..5)
+- **Date:** 2026-07-12
+- **Decision:** Five-persona review completed (docs/execution/ADVERSARIAL_REVIEW.md);
+  revisions applied: mandatory hand-coded toy book in interview prep (AR-1); deferred-emission
+  markout collector design note (AR-2); RQ1 mechanical-adverse-selection validity bound in
+  headline (AR-3); seed-level scatter mandatory beside every headline comparison (AR-4);
+  [LEARN] owner-walkthrough gates in the build sequence (AR-5).
+- **Status:** LOCKED.
+
 ---
 
 ## Open decisions
