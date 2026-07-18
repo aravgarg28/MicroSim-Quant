@@ -1,0 +1,29 @@
+# Build trees (one per CMake preset)
+/build/
+compile_commands.json
+.cache/
+
+# Experiment output. See docs/storage/EXPERIMENT_STORAGE.md "what is committed":
+# only frozen-config hash locks, findings assets, and CI golden outputs are
+# tracked — everything else is regenerable and stays local.
+/results/*
+!/results/.gitkeep
+!/results/**/*.lock
+!/results/benchmarks/**/manifest.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+.mypy_cache/
+.ruff_cache/
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
