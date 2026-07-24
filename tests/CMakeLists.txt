@@ -17,7 +17,43 @@ function(microsim_add_test module)
   gtest_discover_tests(${target})
 endfunction()
 
-microsim_add_test(core unit/core/test_link_core.cpp)
+microsim_add_test(core unit/core/test_link_core.cpp unit/core/test_types.cpp)
+
+# Compile-fail tests: prove the banned strong-type operations
+# (docs/numerics/NUMERIC_REPRESENTATION.md) do not compile. Each target is
+# EXCLUDE_FROM_ALL so it never breaks the normal build; a CTest builds it and
+# expects failure (WILL_FAIL). ok_control below is the positive control: it uses
+# only allowed operations and MUST build, so the harness demonstrably
+# discriminates rather than passing on any compile error.
+function(microsim_add_compile_fail case)
+  set(target "cf_core_${case}")
+  add_executable(${target} EXCLUDE_FROM_ALL "unit/core/compile_fail/${case}.cpp")
+  target_link_libraries(${target} PRIVATE microsim::core)
+  set_target_properties(${target} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD TRUE)
+  add_test(NAME core.compile_fail.${case}
+           COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${target}
+                   --config $<CONFIG>)
+  set_tests_properties(core.compile_fail.${case} PROPERTIES WILL_FAIL TRUE)
+endfunction()
+
+foreach(case
+        price_plus_qty
+        price_plus_price
+        price_times_qty
+        implicit_int_to_price
+        implicit_price_to_int
+        qty_plus_cash
+        simtime_plus_simtime
+        qty_times_qty
+        cross_compare_cash_qty)
+  microsim_add_compile_fail(${case})
+endforeach()
+
+# Positive control: builds as part of the normal build; if it ever fails to
+# compile, the whole build fails (not silently a passing WILL_FAIL).
+add_executable(cf_core_ok_control unit/core/compile_fail/ok_control.cpp)
+target_link_libraries(cf_core_ok_control PRIVATE microsim::core microsim::warnings)
+add_test(NAME core.compile_fail.ok_control_runs COMMAND cf_core_ok_control)
 microsim_add_test(book unit/book/test_link_book.cpp)
 microsim_add_test(sim unit/sim/test_link_sim.cpp)
 microsim_add_test(accounting unit/accounting/test_link_accounting.cpp)

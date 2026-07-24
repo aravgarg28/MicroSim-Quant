@@ -1,1 +1,1 @@
-microsim_add_library(core src/module_info.cpp)
+microsim_add_library(core src/module_info.cpp src/types.cpp)

@@ -1,8 +1,15 @@
 # Build System
 
 CMake ≥ 3.27, C++20 (S1), FetchContent-pinned dependencies (S2). One-command builds on macOS
-(AppleClang ≥ 15) and Linux (Clang ≥ 16, GCC ≥ 13 as the second compiler for warning
-diversity).
+(**AppleClang ≥ 16** — Xcode 16+) and Linux (Clang ≥ 16, GCC ≥ 13 as the second compiler for
+warning diversity).
+
+> **macOS floor is AppleClang 16, not 15.** `std::format` support for *custom* formatters is
+> incomplete in the libc++ shipped with Xcode 15 (libc++ 16): the consteval format-string
+> check does not recognize user-defined `std::formatter` specializations. libc++ 17+
+> (Xcode 16) is complete. CI runs `macos-15` for this reason (task R1-03 finding). If macOS 15
+> support ever becomes necessary, the alternative is to route formatting through `fmt` (a
+> planned dependency) instead of `std::format`.
 
 ## Presets (`CMakePresets.json` — the only supported way to configure)
 

@@ -62,8 +62,11 @@ jobs:
           - name: linux-release
             os: ubuntu-24.04
             preset: release
+          # macos-15 = Xcode 16 (AppleClang 16 / libc++ 18): complete std::format
+          # for custom formatters. macos-14 (Xcode 15, libc++ 16) has incomplete
+          # std::format support and is below the project floor (BUILD_SYSTEM.md).
           - name: macos-debug
-            os: macos-14
+            os: macos-15
             preset: debug
     steps:
       - uses: actions/checkout@v4
