@@ -12,7 +12,7 @@ Release 1 milestone; until then this file is developer-facing.
 
 ## Development
 
-Requirements: CMake ≥ 3.27, Ninja, a C++20 compiler (AppleClang 15+ / Clang 16+ / GCC 13+).
+Requirements: CMake ≥ 3.27, Ninja, a C++20 compiler (AppleClang 16+ / Clang 16+ / GCC 13+).
 Build tooling and rationale are documented in
 [`docs/build/BUILD_SYSTEM.md`](docs/build/BUILD_SYSTEM.md).
 

@@ -14,7 +14,7 @@ GitHub Actions, free tier only. Fast feedback per PR; heavy work nightly; nothin
 | `linux-debug` | ubuntu | debug preset: unit + property(CI budget) + differential + replay tests |
 | `linux-asan` | ubuntu | asan-ubsan preset: same suite |
 | `linux-release` | ubuntu | release preset: full test suite + 60s/target fuzz smoke |
-| `macos` | macos-14 (arm64) | debug + asan: full C++ suite (platform diversity catches real bugs) |
+| `macos` | macos-15 (arm64, Xcode 16) | debug: full C++ suite (platform diversity catches real bugs; Xcode 16 for complete std::format, see BUILD_SYSTEM.md) |
 | `python` | ubuntu + macos | build wheel, pytest (binding + micro-E2E: run→store→analyze→reproduce on 2-seed micro configs), nbconvert-execute notebooks on micro outputs |
 | `bench-smoke` | ubuntu | 3-benchmark subset vs stored runner baseline, **labeled unstable**, regression >25% fails (gross breakage only — real gates run on the dev Mac per METHODOLOGY) |
 
