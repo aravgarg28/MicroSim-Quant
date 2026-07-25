@@ -1,0 +1,109 @@
+# Per-PR and push-to-main continuous integration (docs/build/CI_PLAN.md).
+#
+# Scope for task R1-02: format, linux-debug, linux-asan, linux-release, macos.
+# The tidy, deps/spec-coverage, python, and bench-smoke jobs arrive with their
+# subjects (R1-24, R2, R1-23) so CI never references tooling that does not exist.
+#
+# Performance note: no benchmark *numbers* are produced here. Authoritative
+# measurement happens only on the dev Mac (docs/performance/METHODOLOGY.md);
+# cross-runner comparison is never valid.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# One in-flight run per ref; a new push cancels the previous (free-tier minutes).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Formatting. clang-format is pinned via pip so CI and every contributor use
+  # the identical version — formatting is reproducible, never version-dependent.
+  # The canonical version also appears in docs/build/BUILD_SYSTEM.md.
+  # ---------------------------------------------------------------------------
+  format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned clang-format
+        run: pip install "clang-format==20.1.7"
+      - name: Check formatting
+        run: ./scripts/format.sh --check
+
+  # ---------------------------------------------------------------------------
+  # Build + test matrix. -Werror is enabled here (and only here): the strict
+  # warning set gates CI while local iteration stays unblocked (decision in
+  # docs/build/BUILD_SYSTEM.md).
+  # ---------------------------------------------------------------------------
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-debug
+            os: ubuntu-24.04
+            preset: debug
+          - name: linux-asan
+            os: ubuntu-24.04
+            preset: asan-ubsan
+          - name: linux-release
+            os: ubuntu-24.04
+            preset: release
+          - name: macos-debug
+            os: macos-14
+            preset: debug
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build clang
+
+      - name: Install build tools (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      # ccache also caches the compilation of the FetchContent dependencies
+      # (gtest, benchmark), which dominate a cold build.
+      - name: Set up ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.name }}
+          max-size: 400M
+
+      # Cache the fetched dependency *sources* so git clones are skipped when
+      # cmake/deps.cmake is unchanged.
+      - name: Cache FetchContent sources
+        uses: actions/cache@v4
+        with:
+          path: .deps-cache
+          key: deps-${{ runner.os }}-${{ hashFiles('cmake/deps.cmake') }}
+
+      - name: Configure
+        env:
+          CC: ${{ runner.os == 'Linux' && 'clang' || '' }}
+          CXX: ${{ runner.os == 'Linux' && 'clang++' || '' }}
+        run: >
+          cmake --preset ${{ matrix.preset }}
+          -DMICROSIM_WERROR=ON
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DFETCHCONTENT_BASE_DIR=${{ github.workspace }}/.deps-cache
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }}

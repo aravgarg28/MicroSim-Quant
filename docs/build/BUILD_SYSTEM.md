@@ -47,7 +47,9 @@ only — no PyPI publishing planned; install-from-source is the documented path)
 ## Tooling
 
 - `clang-format` (file committed; LLVM-based style, 100 cols) — CI checks, `scripts/format.sh`
-  fixes.
+  fixes. **Pinned to version 20.1.7**, installed in CI via `pip install clang-format==20.1.7`
+  so formatting is reproducible across machines and does not drift with a contributor's local
+  LLVM version.
 - `clang-tidy` (curated check list: bugprone-*, performance-*, modernize-* minus noisy ones,
   cppcoreguidelines subset) — CI on changed files; full run nightly.
 - `.editorconfig`, `.gitattributes` (LF everywhere) — cross-platform hygiene.
