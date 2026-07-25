@@ -8,6 +8,26 @@ Format: ID · Date · Decision · Alternatives considered · Rationale · Status
 
 ---
 
+## Implementation-phase decisions
+
+### D18 — macOS toolchain floor raised to AppleClang 16 (Xcode 16); CI runs `macos-15`
+- **Date:** 2026-07-25
+- **Discovered by:** task R1-03 (core strong types) — CI's `macos-14` (Xcode 15.4, libc++ 16)
+  rejected `std::format` on custom `std::formatter` specializations: libc++ ≤ 16's consteval
+  format-string check does not recognize user-defined formatters. Linux and the AppleClang-17
+  dev Mac compiled it cleanly.
+- **Alternatives:** (a) route all formatting through `fmt` (a planned dependency; works on
+  AppleClang 15) instead of `std::format`; (b) drop custom `std::format` support entirely and
+  rely on ostream only.
+- **Rationale:** `std::format` is the standard, the dev Mac uses it natively, and bumping the
+  CI runner to `macos-15` (Xcode 16 / libc++ 18) adds zero dependencies. AppleClang 16 is a mild,
+  honest floor for a 2026 C++20/23 project. `fmt` remains the documented fallback if macOS-15
+  support is ever needed. BUILD_SYSTEM.md / README / CI_PLAN updated to match.
+- **Status:** LOCKED (delegated to the maintainer; owner may reopen — the `fmt` fallback keeps the
+  15-floor option open at any time).
+
+---
+
 ## Product decisions
 
 ### D1 — Project emphasis: systems-leaning balance (~60% engineering / 40% research)
