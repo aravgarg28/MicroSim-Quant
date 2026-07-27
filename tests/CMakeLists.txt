@@ -17,7 +17,8 @@ function(microsim_add_test module)
   gtest_discover_tests(${target})
 endfunction()
 
-microsim_add_test(core unit/core/test_link_core.cpp unit/core/test_types.cpp)
+microsim_add_test(core unit/core/test_link_core.cpp unit/core/test_types.cpp
+                  unit/core/test_events.cpp)
 
 # Compile-fail tests: prove the banned strong-type operations
 # (docs/numerics/NUMERIC_REPRESENTATION.md) do not compile. Each target is
