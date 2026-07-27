@@ -7,7 +7,7 @@ expanding R4 tasks before R1 code exists would fossilize guesses.
 ## Task template (fields and their defaults)
 
 Every task block carries: **ID · Title · Objective · Scope · Excludes · Prereqs · Files ·
-Interfaces/Data · Tests · Verify · DoD extras · Risk · Size · Model · the maintainer-review**.
+Interfaces/Data · Tests · Verify · DoD extras · Risk · Size · Deep-review**.
 Conventions that apply to ALL tasks (stated once, not repeated):
 
 - *Background* = the spec sections cited in the block; read them first.
@@ -18,13 +18,13 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - *Complexity expectations* = per ORDER_BOOK_DESIGN/spec tables where relevant, else "obvious
   implementation is fine".
 - *Documentation updates* = if behavior differs from any doc, STOP and follow the deviation
-  protocol (OPUS_HANDOFF) — docs are fixed by the maintainer, not drive-by edited.
+  protocol (IMPLEMENTATION_GUIDE) — docs are fixed by the maintainer, not drive-by edited.
 - *Definition of Done* (all tasks): named tests cite their rule/INV IDs; suite green under
   `debug` and `asan-ubsan` presets locally; CI green; `clang-format`/`tidy` clean; commit
-  message references the task ID; completion report filed (OPUS_HANDOFF format).
+  message references the task ID; completion report filed (IMPLEMENTATION_GUIDE format).
 - *Verify* commands assume: `cmake --preset <p> && cmake --build --preset <p>` then
   `ctest --preset <p> [-R <filter>]`. Abbreviated below as `build+test(<p>) [filter]`.
-- Sizes: S ≈ half-day PR, M ≈ 1-day, L ≈ 2-day (the implementer-days; split anything trending past L).
+- Sizes: S ≈ half-day PR, M ≈ 1-day, L ≈ 2-day (engineer-days; split anything trending past L).
 
 ---
 
@@ -43,7 +43,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Files:** everything top-level; `src/*/`.
 - **Tests:** one trivial gtest per module target proving link; one trivial benchmark runs.
 - **Verify:** `build+test(debug)`, `build+test(asan-ubsan)`, `./scripts/format.sh --check`.
-- **Risk:** low · **Size:** M · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** low · **Size:** M · **Deep-review:** no.
 
 ### R1-02 · CI pipeline v1
 - **Objective:** `pr.yml` jobs: format, linux-debug, linux-asan, linux-release, macos-debug
@@ -51,7 +51,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
   + FetchContent caching; branch protection notes in README-dev section.
 - **Prereqs:** R1-01.
 - **Verify:** green run on a PR touching a placeholder.
-- **Risk:** low · **Size:** S · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** low · **Size:** S · **Deep-review:** no.
 
 ### R1-03 · Core strong types
 - **Objective:** `Price`, `Qty`, `Cash`, `SimTime`, `Duration`, `OrderId`, `ClientOrderId`,
@@ -64,7 +64,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Tests:** unit: ops tables; compile-fail tests (CMake `try_compile` negative cases) for
   banned ops (Price+Qty etc.).
 - **Verify:** `build+test(debug) core`.
-- **Risk:** low · **Size:** M · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** low · **Size:** M · **Deep-review:** no.
 
 ### R1-04 · Messages, events, reasons
 - **Objective:** All inbound message and outbound event structs + `RejectReason`/
@@ -76,7 +76,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Prereqs:** R1-03.
 - **Tests:** unit: layout asserts, enum table round-trips, exhaustive-switch coverage helpers.
 - **Verify:** `build+test(debug) core`.
-- **Risk:** low · **Size:** S · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** low · **Size:** S · **Deep-review:** no.
 
 ### R1-05 · Instrument & participant config + validation
 - **Objective:** `InstrumentConfig`, `ParticipantConfig` (risk fields incl. reserved
@@ -86,7 +86,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Tests:** unit: acceptance/rejection tables incl. overflow bounds at the edge; Notional
   exactness cases.
 - **Verify:** `build+test(debug) core`.
-- **Risk:** low · **Size:** S · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** low · **Size:** S · **Deep-review:** no.
 
 ### R1-06 · Boundary conversions + TOML config parsing
 - **Objective:** exact decimal-string ↔ ticks/lots/minor-units conversions (reject
@@ -97,7 +97,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
   overflow, trailing-zero forms); hash stability goldens.
 - **Fuzz:** `fuzz_config` target skeleton (full corpus work in R1-22).
 - **Verify:** `build+test(debug) core`.
-- **Risk:** medium (parsing edge cases) · **Size:** M · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** medium (parsing edge cases) · **Size:** M · **Deep-review:** no.
 
 ### R1-07 · RNG streams and samplers
 - **Objective:** master-seed → named-stream derivation (`hash(master, name)` → PCG/SplitMix64
@@ -110,7 +110,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Tests:** unit: goldens; stream-independence (drop stream A ⇒ B unchanged); basic
   statistical sanity (mean/var within wide bands, seeded — never flaky).
 - **Verify:** `build+test(debug) sim` on both platforms (CI proves cross-platform).
-- **Risk:** medium (sampler numerics) · **Size:** M · **Model:** the implementer · **the maintainer-review:**
+- **Risk:** medium (sampler numerics) · **Size:** M · **Deep-review:**
   yes (sampler math + stream-derivation review).
 
 ### R1-08 · Simulation clock and event queue
@@ -124,7 +124,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
   schedule → identical dispatch log.
 - **Benchmark:** `bm_event_queue` (schedule+pop at depths 10³–10⁶) — recorded, not optimized.
 - **Verify:** `build+test(debug) sim`.
-- **Risk:** medium · **Size:** M · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** medium · **Size:** M · **Deep-review:** no.
 
 ### R1-09 · ReferenceBook
 - **Objective:** the oracle, exactly per REFERENCE_MODEL.md: `std::map`+`std::list`,
@@ -135,7 +135,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
   example; the concept's compile-time checks.
 - **Verify:** `build+test(debug) book`.
 - **Risk:** medium (it's the oracle — bugs here poison everything) · **Size:** L ·
-  **Model:** the implementer · **the maintainer-review:** **yes, mandatory line-by-line vs EXCHANGE_RULES.md
+  **Deep-review:** **yes, mandatory line-by-line vs EXCHANGE_RULES.md
   before any dependent task starts** (REFERENCE_MODEL §verification).
 
 ### R1-10 · Order registry and gateway validation
@@ -148,7 +148,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
   earlier reason wins); dedup; state-machine transition table incl. illegal-transition
   asserts; slot-recycle + generation guard.
 - **Verify:** `build+test(debug) engine`.
-- **Risk:** medium · **Size:** M · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** medium · **Size:** M · **Deep-review:** no.
 
 ### R1-11 · Sequencer and input event log
 - **Objective:** seq/seq_out/ts_event stamping (R-10); persist writer v1: length-prefixed
@@ -158,7 +158,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Tests:** unit: monotonicity, gap-free; round-trip write→read→byte-compare; truncated/
   corrupt file → clean error. **Fuzz:** `fuzz_persist_reader` target.
 - **Verify:** `build+test(debug) 'engine|persist'`.
-- **Risk:** low · **Size:** M · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** low · **Size:** M · **Deep-review:** no.
 
 ### R1-12 · Matching: new orders (limit + market)
 - **Objective:** `handle_new` + `match_loop` + `execute_trade` pseudocode
@@ -171,7 +171,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Tests:** unit per rule: R-5.2..5.8, R-11.2 fee arithmetic, the §15 worked example
   end-to-end as a fixture.
 - **Verify:** `build+test(debug) engine`.
-- **Risk:** high (the core algorithm) · **Size:** L · **Model:** the implementer · **the maintainer-review:**
+- **Risk:** high (the core algorithm) · **Size:** L · **Deep-review:**
   yes (review vs pseudocode before R1-13 proceeds).
 
 ### R1-13 · Matching: cancel
@@ -179,8 +179,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
   NOT_ORDER_OWNER vs TOO_LATE_TO_CANCEL).
 - **Prereqs:** R1-12.
 - **Tests:** unit: each reason path; cancel-then-anything absorbing checks.
-- **Verify:** `build+test(debug) engine`. **Risk:** low · **Size:** S · **Model:** the implementer ·
-  **the maintainer-review:** no.
+- **Verify:** `build+test(debug) engine`. **Risk:** low · **Size:** S · **Deep-review:** no.
 
 ### R1-14 · Matching: modify
 - **Objective:** `handle_modify` per R-7 — priority table (price Δ / qty↑ requeue, qty↓ keep),
@@ -189,7 +188,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Tests:** unit: the full R-7.2 priority matrix (each cell a named test); R-7.3 edge
   (new_qty == filled); marketable-after-modify walk.
 - **Verify:** `build+test(debug) engine`. **Risk:** high (most fiddly rules) · **Size:** M ·
-  **Model:** the implementer · **the maintainer-review:** yes (queue-token/FIFO semantics).
+  **Deep-review:** yes (queue-token/FIFO semantics).
 
 ### R1-15 · Minimal risk checks + position tally
 - **Objective:** R-9.1/9.2/9.3 with a minimal signed-fill position tally (full accounting is
@@ -198,16 +197,14 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Prereqs:** R1-12..14.
 - **Tests:** unit: boundary (at-limit pass / one-over fail) per check; both-sides-open
   worst-case cases; modify-delta cases; INV-14 recompute-from-scratch checker.
-- **Verify:** `build+test(debug) engine`. **Risk:** medium · **Size:** M · **Model:** the implementer ·
-  **the maintainer-review:** no.
+- **Verify:** `build+test(debug) engine`. **Risk:** medium · **Size:** M · **Deep-review:** no.
 
 ### R1-16 · Session end
 - **Objective:** R-12: OPEN→CLOSED, deterministic cancel-all order, MARKET_CLOSED rejects,
   half-tick mark computation (accounting hook stubbed to the tally).
 - **Prereqs:** R1-15.
 - **Tests:** unit: cancel ordering fixture; post-CLOSED reject; INV-17 skeleton check.
-- **Verify:** `build+test(debug) engine`. **Risk:** low · **Size:** S · **Model:** the implementer ·
-  **the maintainer-review:** no.
+- **Verify:** `build+test(debug) engine`. **Risk:** low · **Size:** S · **Deep-review:** no.
 
 ### R1-17 · Invariant checker harness
 - **Objective:** `assert_invariants(engine, book)` implementing INV-1..9, 12, 13, 14 checks
@@ -216,8 +213,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Prereqs:** R1-16.
 - **Tests:** self-test: hand-broken book states (crossed, misordered, over-filled…) each trip
   their checker (a checker that can't fail is decoration).
-- **Verify:** `build+test(debug) engine`. **Risk:** medium · **Size:** M · **Model:** the implementer ·
-  **the maintainer-review:** no.
+- **Verify:** `build+test(debug) engine`. **Risk:** medium · **Size:** M · **Deep-review:** no.
 
 ### R1-18 · Scenario generator + property suite
 - **Objective:** `ScenarioGen(seed, profile)` with all PROPERTY_TESTS.md profiles +
@@ -226,8 +222,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Prereqs:** R1-17.
 - **Tests:** the suite itself + generator determinism goldens + shrinker unit tests.
 - **Verify:** `build+test(debug) prop`, `build+test(asan-ubsan) prop`.
-- **Risk:** high (test-infra quality gates everything) · **Size:** L · **Model:** the implementer ·
-  **the maintainer-review:** yes (profile coverage + shrinker design).
+- **Risk:** high (test-infra quality gates everything) · **Size:** L · **Deep-review:** yes (profile coverage + shrinker design).
 
 ### R1-19 · FastBook stage 1
 - **Objective:** tick-indexed level array + `std::deque` FIFOs + `std::unordered_map` id
@@ -236,8 +231,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Prereqs:** R1-09 (concept), R1-18 (suite to run against).
 - **Tests:** entire unit+property suite instantiated on FastBook.
 - **Benchmark:** `bm_book_insert/cancel/modify` Fast vs Reference recorded (baseline).
-- **Verify:** `build+test(debug) book`. **Risk:** medium · **Size:** L · **Model:** the implementer ·
-  **the maintainer-review:** no (differential gate next task is the review).
+- **Verify:** `build+test(debug) book`. **Risk:** medium · **Size:** L · **Deep-review:** no (differential gate next task is the review).
 
 ### R1-20 · Differential harness
 - **Objective:** engine<Fast> vs engine<Reference> over generated scenarios: event-stream
@@ -247,7 +241,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Tests:** the harness + a deliberately-buggy book (mutation) proving it catches.
 - **Verify:** `build+test(debug) diff`, then nightly-budget local run documented in the
   completion report.
-- **Risk:** medium · **Size:** M · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** medium · **Size:** M · **Deep-review:** no.
 
 ### R1-21 · Replay engine and CLIs
 - **Objective:** replay from input log (bypass generation, original timestamps) +
@@ -257,7 +251,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Prereqs:** R1-11, R1-16.
 - **Tests:** replay determinism (in-process, cross-process, from-log); CLI golden outputs.
 - **Verify:** `build+test(release) replay` (+ debug).
-- **Risk:** medium · **Size:** M · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** medium · **Size:** M · **Deep-review:** no.
 
 ### R1-22 · Scripted scenarios + fuzz targets v1
 - **Objective:** TOML scenario-script schema (time, participant, action rows) + loader;
@@ -268,7 +262,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Tests:** script loader units; fuzz targets build+run (CI smoke); corpus replay coverage
   note in completion report.
 - **Verify:** `build+test(asan-ubsan)`; `./fuzz_gateway -runs=100000 corpus/`.
-- **Risk:** medium · **Size:** M · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** medium · **Size:** M · **Deep-review:** no.
 
 ### R1-23 · Benchmark suite v1 + counting allocator + baseline
 - **Objective:** `bench` preset; counting `operator new` hook; `bm_match_*`,
@@ -278,7 +272,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Prereqs:** R1-19, R1-21.
 - **Tests:** compare-script unit tests (fixture JSONs); allocs/op column present.
 - **Verify:** `cmake --preset bench && ./scripts/run_benchmarks.sh --suite r1 --dry-run`.
-- **Risk:** low · **Size:** M · **Model:** the implementer · **the maintainer-review:** no.
+- **Risk:** low · **Size:** M · **Deep-review:** no.
 
 ### R1-24 · Spec-coverage + layering enforcement, nightly CI
 - **Objective:** `spec_coverage.py` (every R-x.y/INV-n referenced by ≥1 test name/comment —
@@ -286,8 +280,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
   `nightly.yml` (extended property, 30min fuzz, Valgrind on Linux, coverage ratchet).
 - **Prereqs:** R1-22.
 - **Verify:** both scripts pass on the tree; deliberate violations (temp branch) fail.
-- **Risk:** low · **Size:** M · **Model:** the implementer (scripts) + the implementer (coverage-ratchet
-  plumbing) · **the maintainer-review:** no.
+- **Risk:** low · **Size:** M · **Deep-review:** no.
 
 ### R1-25 · Release 1 assembly
 - **Objective:** README v1 (skeleton sections 1–6, 10 filled per README_PLAN); demo replay
@@ -295,7 +288,7 @@ Conventions that apply to ALL tasks (stated once, not repeated):
 - **Prereqs:** all R1 tasks.
 - **Verify:** clean-clone quick-start on both platforms; R1 exit checklist in completion
   report.
-- **Risk:** low · **Size:** S · **Model:** the implementer (assembly) · **the maintainer-review:** yes
+- **Risk:** low · **Size:** S · **Deep-review:** yes
   (release review — the maintainer audits criteria evidence).
 
 ---

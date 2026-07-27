@@ -53,7 +53,7 @@ Event-stream equality is the stronger half: two books can end in the same state 
 ## Verification of the reference itself
 
 The oracle needs its own grounding: (1) line-by-line review against EXCHANGE_RULES.md (a
-the maintainer-review checkpoint in BUILD_SEQUENCE.md — the one component where human/strong-model
+Deep-review checkpoint in BUILD_SEQUENCE.md — the one component where human/strong-model
 review is mandatory before anything is tested against it); (2) the scripted worked examples
 (rules doc §15, accounting examples) assert exact expected outputs; (3) all unit and property
 tests run against the reference first — it must pass everything the fast book must pass.

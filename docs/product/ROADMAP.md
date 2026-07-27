@@ -25,7 +25,7 @@ benchmarking, build/CI, presentation plans, and the ordered implementation task 
 **Performance work:** Benchmark methodology written before any measurement exists.
 
 **Risks:** Over-specification that the implementer contradicts in practice → mitigated by a documented
-deviation protocol in `docs/execution/OPUS_HANDOFF.md`.
+deviation protocol in `docs/execution/IMPLEMENTATION_GUIDE.md`.
 
 **Success criteria:** Owner has approved all eight checkpoints; adversarial review (5 personas)
 completed and revisions applied; every implementation task traceable to a spec section.

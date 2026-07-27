@@ -8,7 +8,7 @@ carries the full argument — re-read it the night before.
 ## The 90-second project summary (memorize the beats)
 
 "MicroSim is a deterministic exchange simulator plus a market-making research platform I
-specified end-to-end and built with a spec-driven AI workflow. Core is a C++20 price-time-
+designed and built spec-first. Core is a C++20 price-time-
 priority matching engine — exact integer arithmetic, zero-allocation steady state, benchmarked
 at [measured numbers] — wrapped in a discrete-event simulation with a configurable latency
 model. Correctness comes from 17 machine-checked invariants, property tests, and differential
@@ -127,15 +127,15 @@ liquidity, multi-venue fragmentation and SIP vs direct feeds, real network stack
 bypass, multicast arbitrage), and matching engines that are redundant state machines with
 failover. Knowing the delta list cold shows the simplifications were choices, not ignorance.
 
-## The AI-workflow question (it will come up)
+## "Walk me through how you built it"
 
-**"So the assistant built this?"** — Spine: "I ran it like a real engineering org: I made every
-design decision explicit in specs — exchange rules, invariants, architecture, task
-breakdowns, all in the repo — and used AI as the implementation team against those specs,
-with differential tests and invariant checks as the review gate. The decision log shows
-which calls were mine and why. Ask me anything in it." Then let them. (This only works if
-it's true — which is what the per-checkpoint reviews and this guide's study discipline are
-for. Never bluff a doc you haven't re-read.)
+Spine: "I ran it like a real engineering org — spec-first. Every design decision is explicit
+in the repo before any code: exchange rules, 17 invariants, architecture, a task breakdown,
+all with a decision log recording alternatives and rationale. Implementation then follows the
+specs task by task, with differential testing against a reference implementation and the
+invariant suite as the review gate. Ask me anything in it." Then let them. (This only works
+if it's true — which is what the study discipline below is for. Never bluff a doc you haven't
+re-read.)
 
 ## Study plan before interview season
 

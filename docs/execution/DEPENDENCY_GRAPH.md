@@ -67,5 +67,5 @@ Slack lives in: E08 (replay can trail), E09 (benchmarks can trail until E18), E1
 ## Rule
 
 A task may start only when its prerequisites' **Definition of Done** is met — not merely
-"code exists" (IMPLEMENTATION_TASKS defines DoD per task; OPUS_HANDOFF makes the implementer verify
+"code exists" (IMPLEMENTATION_TASKS defines DoD per task; IMPLEMENTATION_GUIDE makes the implementer verify
 prerequisites before starting).

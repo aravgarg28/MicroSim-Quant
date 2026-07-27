@@ -43,7 +43,7 @@ diffs (`pipx install clang-format==20.1.7`, or Homebrew's is close enough for th
 ### Contributing workflow
 
 - Work happens on `task/<TASK-ID>-<slug>` branches, one implementation task per pull request
-  (see [`docs/execution/OPUS_HANDOFF.md`](docs/execution/OPUS_HANDOFF.md) and
+  (see [`docs/execution/IMPLEMENTATION_GUIDE.md`](docs/execution/IMPLEMENTATION_GUIDE.md) and
   [`docs/execution/IMPLEMENTATION_TASKS.md`](docs/execution/IMPLEMENTATION_TASKS.md)).
 - CI ([`.github/workflows/pr.yml`](.github/workflows/pr.yml)) must be green before merge:
   formatting, plus build + test on Linux (`debug`, `asan-ubsan`, `release`) and macOS

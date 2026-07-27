@@ -30,9 +30,8 @@ demonstrable from a clean clone.**
     market scope) — pre-empting the smart skeptic is the strongest credibility move available.
 12. **Roadmap + docs index** — where the project is on the release ladder; guided reading
     order for a reviewer with 5 / 30 / 120 minutes.
-13. **License, attribution** (MIT; "specifications authored with the maintainer, implementation
-    with the implementer, all design decisions logged in docs/DECISIONS.md" — the AI-assisted
-    workflow is disclosed, not hidden: the decision log makes it a strength).
+13. **License** (MIT) and a pointer to `docs/DECISIONS.md`, where every design decision is
+    recorded with its alternatives and rationale.
 
 ## Maintenance rules
 
