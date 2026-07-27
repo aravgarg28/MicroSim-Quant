@@ -14,10 +14,15 @@ function(microsim_add_test module)
   add_executable(${target} ${ARGN})
   target_link_libraries(${target} PRIVATE microsim::${module} microsim::warnings
                                           GTest::gtest_main)
-  gtest_discover_tests(${target})
+  # DISCOVERY_MODE PRE_TEST defers test enumeration from build time to ctest
+  # time. Build-time discovery (the default) intermittently fails on CI runners
+  # with "Missing expected JSON file with test list"; PRE_TEST avoids running
+  # the executables during the build entirely.
+  gtest_discover_tests(${target} DISCOVERY_MODE PRE_TEST)
 endfunction()
 
-microsim_add_test(core unit/core/test_link_core.cpp unit/core/test_types.cpp)
+microsim_add_test(core unit/core/test_link_core.cpp unit/core/test_types.cpp
+                  unit/core/test_events.cpp)
 
 # Compile-fail tests: prove the banned strong-type operations
 # (docs/numerics/NUMERIC_REPRESENTATION.md) do not compile. Each target is
