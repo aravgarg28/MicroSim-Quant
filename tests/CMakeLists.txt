@@ -22,7 +22,7 @@ function(microsim_add_test module)
 endfunction()
 
 microsim_add_test(core unit/core/test_link_core.cpp unit/core/test_types.cpp
-                  unit/core/test_events.cpp)
+                  unit/core/test_events.cpp unit/core/test_config.cpp)
 
 # Compile-fail tests: prove the banned strong-type operations
 # (docs/numerics/NUMERIC_REPRESENTATION.md) do not compile. Each target is

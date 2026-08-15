@@ -10,6 +10,18 @@ Format: ID · Date · Decision · Alternatives considered · Rationale · Status
 
 ## Implementation-phase decisions
 
+### D19 — Lean engine-first MVP sequencing
+- **Date:** 2026-07-27
+- **Decision:** Drive Release 1's engine core to a runnable, differential-tested single-instrument
+  exchange with a demo CLI and benchmarks first, deferring the Python bindings (R2), the rigorous
+  research experiment (R3), and the heavier fuzz/nightly-CI polish (R1-22/R1-24) until after that
+  milestone. Differential testing against the reference book is kept (it is cheap, high-value
+  credibility). Later releases then layer on top with nothing discarded.
+- **Rationale:** Owner needs a working, demoable, resume-worthy artifact as soon as possible. The
+  correct benchmarked engine is that artifact; the research layer elevates it but is not required
+  for a first demo.
+- **Status:** LOCKED (owner choice).
+
 ### D18 — macOS toolchain floor raised to AppleClang 16 (Xcode 16); CI runs `macos-15`
 - **Date:** 2026-07-25
 - **Discovered by:** task R1-03 (core strong types) — CI's `macos-14` (Xcode 15.4, libc++ 16)
