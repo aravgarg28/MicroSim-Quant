@@ -14,7 +14,9 @@
 /// the sequencer's job (R1-11); this returns event payloads in emission order.
 
 #include <algorithm>
+#include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "microsim/book/order_book.hpp"
@@ -84,6 +86,54 @@ class MatchingEngine {
     return std::move(out_);
   }
 
+  /// Cancel a resting order (R-6). A participant may cancel only its own order;
+  /// an unknown or already-terminal order is rejected with a distinct reason.
+  std::vector<Outbound> process(const core::CancelOrder& m) {
+    out_.clear();
+
+    OrderRecord* o = registry_.lookup(m.order_id);
+    if (o == nullptr) {
+      out_.push_back(reject_cancel(m, core::RejectReason::UnknownOrder));  // R-6.3
+      return std::move(out_);
+    }
+    if (o->participant != m.participant) {
+      out_.push_back(reject_cancel(m, core::RejectReason::NotOrderOwner));  // R-6.1
+      return std::move(out_);
+    }
+    if (o->terminal()) {
+      out_.push_back(reject_cancel(m, core::RejectReason::TooLateToCancel));  // R-6.3
+      return std::move(out_);
+    }
+
+    // A live order is always resting in the book here (a fully-filled order is
+    // already terminal). Remove it and report the quantity that did not trade.
+    const core::Qty remaining = o->remaining();
+    book_.remove(m.order_id);
+    out_.push_back(core::OrderCanceled{.order_id = m.order_id,
+                                       .participant = o->participant,
+                                       .remaining_qty = remaining,
+                                       .reason = core::CancelReason::ByRequest});  // R-6.2
+    registry_.finalize(m.order_id, OrderState::Canceled);
+    return std::move(out_);
+  }
+
+  /// Dispatch any inbound message to its handler (MATCHING_ENGINE_SPEC top-level
+  /// dispatch). Modify (R1-14) and session end (R1-16) are not yet implemented
+  /// and currently produce no events.
+  std::vector<Outbound> process(const core::Inbound& msg) {
+    return std::visit(
+        [this](const auto& m) -> std::vector<Outbound> {
+          using T = std::decay_t<decltype(m)>;
+          if constexpr (std::is_same_v<T, core::NewOrder> || std::is_same_v<T, core::CancelOrder>) {
+            return process(m);
+          } else {
+            out_.clear();  // ModifyOrder (R1-14), SessionEnd (R1-16): TODO
+            return std::move(out_);
+          }
+        },
+        msg);
+  }
+
   // ----- read-only views for the CLI, tests, and (later) MD --------------------
 
   [[nodiscard]] const Book& book() const noexcept { return book_; }
@@ -93,6 +143,16 @@ class MatchingEngine {
   [[nodiscard]] const core::InstrumentConfig& instrument() const noexcept { return instr_; }
 
  private:
+  /// Build the single OrderRejected for a failed cancel/modify: the target
+  /// order_id is set, client_order_id is unset (events.hpp OrderRejected).
+  [[nodiscard]] static core::OrderRejected reject_cancel(const core::CancelOrder& m,
+                                                         core::RejectReason reason) {
+    return core::OrderRejected{.participant = m.participant,
+                               .client_order_id = core::ClientOrderId{},
+                               .order_id = m.order_id,
+                               .reason = reason};
+  }
+
   /// R-5.3/5.4: while the taker has quantity and is marketable, trade the front
   /// of the best opposite level at the maker's price.
   void match_loop(core::OrderId taker_id) {
