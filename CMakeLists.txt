@@ -48,6 +48,8 @@ add_subdirectory(src/agents)
 add_subdirectory(src/strategy)
 add_subdirectory(src/metrics)
 
+add_subdirectory(apps)
+
 if(MICROSIM_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
