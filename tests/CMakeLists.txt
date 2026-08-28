@@ -22,7 +22,8 @@ function(microsim_add_test module)
 endfunction()
 
 microsim_add_test(core unit/core/test_link_core.cpp unit/core/test_types.cpp
-                  unit/core/test_events.cpp unit/core/test_config.cpp)
+                  unit/core/test_events.cpp unit/core/test_config.cpp
+                  unit/core/test_convert.cpp)
 
 # Compile-fail tests: prove the banned strong-type operations
 # (docs/numerics/NUMERIC_REPRESENTATION.md) do not compile. Each target is
@@ -59,12 +60,19 @@ endforeach()
 add_executable(cf_core_ok_control unit/core/compile_fail/ok_control.cpp)
 target_link_libraries(cf_core_ok_control PRIVATE microsim::core microsim::warnings)
 add_test(NAME core.compile_fail.ok_control_runs COMMAND cf_core_ok_control)
-microsim_add_test(book unit/book/test_link_book.cpp)
+microsim_add_test(book unit/book/test_link_book.cpp unit/book/test_reference_book.cpp)
 microsim_add_test(sim unit/sim/test_link_sim.cpp)
 microsim_add_test(accounting unit/accounting/test_link_accounting.cpp)
 microsim_add_test(md unit/md/test_link_md.cpp)
 microsim_add_test(persist unit/persist/test_link_persist.cpp)
-microsim_add_test(engine unit/engine/test_link_engine.cpp)
+microsim_add_test(engine unit/engine/test_link_engine.cpp unit/engine/test_order_registry.cpp
+                  unit/engine/test_matching_engine.cpp)
 microsim_add_test(agents unit/agents/test_link_agents.cpp)
 microsim_add_test(strategy unit/strategy/test_link_strategy.cpp)
 microsim_add_test(metrics unit/metrics/test_link_metrics.cpp)
+
+# Smoke test for the demo CLI: it must run to completion and produce the known
+# scripted-scenario result (a golden-output check on the walking-skeleton demo).
+add_test(NAME app.microsim_run.smoke COMMAND microsim_run)
+set_tests_properties(app.microsim_run.smoke
+                     PROPERTIES PASS_REGULAR_EXPRESSION "4 trades, 80 lots matched")
