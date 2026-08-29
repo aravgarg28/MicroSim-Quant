@@ -108,6 +108,8 @@ struct EventHeader {
   Seq seq_out;       ///< strictly increasing, gap-free per simulation
   Seq seq_in;        ///< the triggering inbound message's seq
   SimTime ts_event;  ///< logical time at processing
+
+  friend bool operator==(const EventHeader&, const EventHeader&) noexcept = default;
 };
 
 // =============================================================================
@@ -120,6 +122,8 @@ struct OrderAccepted {
   OrderId order_id;
   ParticipantId participant;
   ClientOrderId client_order_id;
+
+  friend bool operator==(const OrderAccepted&, const OrderAccepted&) noexcept = default;
 };
 
 /// A message was rejected with a single reason (R-3.3, R-4.3). For a rejected
@@ -131,6 +135,8 @@ struct OrderRejected {
   ClientOrderId client_order_id;
   OrderId order_id;
   RejectReason reason;
+
+  friend bool operator==(const OrderRejected&, const OrderRejected&) noexcept = default;
 };
 
 /// A resting order was removed with quantity remaining (R-6.2, R-5.5, R-8.2,
@@ -140,6 +146,8 @@ struct OrderCanceled {
   ParticipantId participant;
   Qty remaining_qty;
   CancelReason reason;
+
+  friend bool operator==(const OrderCanceled&, const OrderCanceled&) noexcept = default;
 };
 
 /// A modify succeeded (R-7.5), emitted before any fills the modify triggers.
@@ -148,6 +156,8 @@ struct OrderModified {
   ParticipantId participant;
   Qty new_qty;
   Price new_price;
+
+  friend bool operator==(const OrderModified&, const OrderModified&) noexcept = default;
 };
 
 /// One counterparty's private view of a trade (R-5.7, R-11.2): the fee charged
@@ -161,6 +171,8 @@ struct Fill {
   Qty qty;
   Cash fee;  ///< signed: taker pays (>0 cost), maker receives (<0 cost)
   LiquidityFlag liquidity;
+
+  friend bool operator==(const Fill&, const Fill&) noexcept = default;
 };
 
 /// The audit record of a match (R-5.7): full identities and the aggressor side.
@@ -174,12 +186,26 @@ struct Trade {
   ParticipantId maker_participant;
   ParticipantId taker_participant;
   Side aggressor;
+
+  friend bool operator==(const Trade&, const Trade&) noexcept = default;
 };
 
 /// Any outbound event. The FILLED-terminal state is implicit (the fill that
 /// brings remaining to zero), so there is no separate OrderFilled event (R-4.3).
 using Outbound =
     std::variant<OrderAccepted, OrderRejected, OrderCanceled, OrderModified, Fill, Trade>;
+
+/// An outbound event paired with its sequencing header (R-10.2): the unit the
+/// sequencer (R1-11) emits. Equality is field-wise on both the header and the
+/// payload, which is what the invariant checks (R1-17) and the differential
+/// harness (R1-20) compare — two runs of the same sequenced input must produce
+/// equal streams (R-10.3).
+struct SequencedEvent {
+  EventHeader header;
+  Outbound event;
+
+  friend bool operator==(const SequencedEvent&, const SequencedEvent&) noexcept = default;
+};
 
 // ----- invariants on the enumerations and payload sizes -----------------------
 
