@@ -179,7 +179,8 @@ class ScenarioGen {
       const mc::ParticipantId who = rng_.chance(80) ? owner : some_participant();
       return {id, who};
     }
-    const auto id = mc::OrderId{static_cast<std::uint64_t>(rng_.between(1, next_order_id_ + 3))};
+    const std::int64_t hi = static_cast<std::int64_t>(next_order_id_) + 3;
+    const auto id = mc::OrderId{static_cast<std::uint64_t>(rng_.between(1, hi))};
     return {id, some_participant()};
   }
 
