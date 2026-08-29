@@ -74,6 +74,16 @@ microsim_add_test(agents unit/agents/test_link_agents.cpp)
 microsim_add_test(strategy unit/strategy/test_link_strategy.cpp)
 microsim_add_test(metrics unit/metrics/test_link_metrics.cpp)
 
+# Property suite (R1-18): generated scenarios driven through the engine, asserting
+# every implemented invariant after each message. Its own target (headers under
+# tests/prop/) so `ctest -R Prop` selects it; links the engine (which brings book
+# and core transitively).
+add_executable(test_prop prop/test_generator.cpp prop/test_shrinker.cpp
+                         prop/test_property_suite.cpp)
+target_link_libraries(test_prop PRIVATE microsim::engine microsim::warnings GTest::gtest_main)
+target_include_directories(test_prop PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/prop)
+gtest_discover_tests(test_prop DISCOVERY_MODE PRE_TEST)
+
 # Smoke test for the demo CLI: it must run to completion and produce the known
 # scripted-scenario result (a golden-output check on the walking-skeleton demo).
 add_test(NAME app.microsim_run.smoke COMMAND microsim_run)

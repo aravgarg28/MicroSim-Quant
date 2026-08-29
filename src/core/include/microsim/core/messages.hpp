@@ -32,6 +32,8 @@ struct NewOrder {
   OrderType type;
   Qty qty;
   Price price;  ///< meaningful for LIMIT; Price{} for MARKET
+
+  friend bool operator==(const NewOrder&, const NewOrder&) noexcept = default;
 };
 
 /// Cancel a resting order (R-6.1). `order_id` is the sole key; a participant may
@@ -39,6 +41,8 @@ struct NewOrder {
 struct CancelOrder {
   ParticipantId participant;
   OrderId order_id;
+
+  friend bool operator==(const CancelOrder&, const CancelOrder&) noexcept = default;
 };
 
 /// Cancel/replace (R-7.1). Both fields are the new *total* values; send the
@@ -49,11 +53,15 @@ struct ModifyOrder {
   OrderId order_id;
   Qty new_qty;
   Price new_price;
+
+  friend bool operator==(const ModifyOrder&, const ModifyOrder&) noexcept = default;
 };
 
 /// Internal control event closing the trading session (R-12). Carries no
 /// fields; the engine cancels all resting orders on receipt (R-12.3).
-struct SessionEnd {};
+struct SessionEnd {
+  friend bool operator==(const SessionEnd&, const SessionEnd&) noexcept = default;
+};
 
 /// Any inbound message, as delivered to the exchange. The engine dispatches on
 /// the active alternative (MATCHING_ENGINE_SPEC.md top-level dispatch).
