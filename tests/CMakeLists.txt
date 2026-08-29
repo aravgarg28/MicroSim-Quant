@@ -85,6 +85,17 @@ target_link_libraries(test_prop PRIVATE microsim::engine microsim::warnings GTes
 target_include_directories(test_prop PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/prop)
 gtest_discover_tests(test_prop DISCOVERY_MODE PRE_TEST)
 
+# Differential suite (R1-20): engine<FastBook> vs engine<ReferenceBook> over the
+# generated scenarios, asserting event-stream and book-state equality after every
+# message (INV-15). Reuses the property generator and venue builders (tests/prop/)
+# so both suites drive identical scenarios; `ctest -R Differential` selects it.
+add_executable(test_differential differential/test_differential.cpp)
+target_link_libraries(test_differential PRIVATE microsim::engine microsim::warnings
+                                                GTest::gtest_main)
+target_include_directories(test_differential PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/prop
+                                                     ${CMAKE_CURRENT_SOURCE_DIR}/differential)
+gtest_discover_tests(test_differential DISCOVERY_MODE PRE_TEST)
+
 # Smoke test for the demo CLI: it must run to completion and produce the known
 # scripted-scenario result (a golden-output check on the walking-skeleton demo).
 add_test(NAME app.microsim_run.smoke COMMAND microsim_run)
