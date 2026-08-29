@@ -65,7 +65,7 @@ microsim_add_test(book unit/book/test_link_book.cpp unit/book/test_reference_boo
 microsim_add_test(sim unit/sim/test_link_sim.cpp)
 microsim_add_test(accounting unit/accounting/test_link_accounting.cpp)
 microsim_add_test(md unit/md/test_link_md.cpp)
-microsim_add_test(persist unit/persist/test_link_persist.cpp)
+microsim_add_test(persist unit/persist/test_link_persist.cpp unit/persist/test_log.cpp)
 microsim_add_test(engine unit/engine/test_link_engine.cpp unit/engine/test_order_registry.cpp
                   unit/engine/test_matching_engine.cpp unit/engine/test_cancel.cpp
                   unit/engine/test_modify.cpp unit/engine/test_risk.cpp
@@ -101,6 +101,32 @@ gtest_discover_tests(test_differential DISCOVERY_MODE PRE_TEST)
 add_test(NAME app.microsim_run.smoke COMMAND microsim_run)
 set_tests_properties(app.microsim_run.smoke
                      PROPERTIES PASS_REGULAR_EXPRESSION "4 trades, 80 lots matched")
+
+# Determinism across processes and replay (R1-21, INV-10 strengths 2 and 3): each
+# run tees an input + event log; strength 2 checks two separate process
+# invocations emit byte-identical event logs; strength 3 checks replaying the
+# recorded input log reproduces the event log byte-for-byte. Fresh processes via
+# CTest fixtures (no shared in-process state).
+set(replay_a "${CMAKE_CURRENT_BINARY_DIR}/replay/a")
+set(replay_b "${CMAKE_CURRENT_BINARY_DIR}/replay/b")
+
+add_test(NAME app.replay.produce_a COMMAND microsim_run "${replay_a}")
+set_tests_properties(app.replay.produce_a PROPERTIES FIXTURES_SETUP REPLAY_A)
+add_test(NAME app.replay.produce_b COMMAND microsim_run "${replay_b}")
+set_tests_properties(app.replay.produce_b PROPERTIES FIXTURES_SETUP REPLAY_B)
+
+# INV-10 strength 2: two separate process invocations are byte-identical.
+add_test(NAME app.replay.two_process_determinism
+         COMMAND ${CMAKE_COMMAND} -E compare_files "${replay_a}/events.log" "${replay_b}/events.log")
+set_tests_properties(app.replay.two_process_determinism
+                     PROPERTIES FIXTURES_REQUIRED "REPLAY_A;REPLAY_B")
+
+# INV-10 strength 3: replaying the recorded input log reproduces the event log.
+add_test(NAME app.replay.reproduces_event_log
+         COMMAND microsim_replay "${replay_a}/input.log" "${replay_a}/events.log")
+set_tests_properties(app.replay.reproduces_event_log
+                     PROPERTIES FIXTURES_REQUIRED REPLAY_A
+                                PASS_REGULAR_EXPRESSION "reproduced byte-identically")
 
 # Benchmark-comparator unit tests (R1-23): pure Python over fixture JSONs, run
 # under the normal test build (the bench preset builds no tests). Skipped with a

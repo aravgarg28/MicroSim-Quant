@@ -1,6 +1,11 @@
-# Command-line front ends. Tier-A ships microsim_run, a scripted demonstration
-# driver; the scenario-file replay CLIs (microsim_run v1, microsim_replay) are
-# fleshed out in R1-21.
+# Command-line front ends (docs/architecture/REPOSITORY_STRUCTURE.md). Both drive
+# the same demo scenario/config (demo.hpp): microsim_run tees an input + event
+# log, microsim_replay reads the input log back and reproduces the event log
+# byte-identically (INV-10). Both link the engine (matching + sequencer) and
+# persist (the on-disk log).
 
 add_executable(microsim_run microsim_run.cpp)
-target_link_libraries(microsim_run PRIVATE microsim::engine microsim::warnings)
+target_link_libraries(microsim_run PRIVATE microsim::engine microsim::persist microsim::warnings)
+
+add_executable(microsim_replay microsim_replay.cpp)
+target_link_libraries(microsim_replay PRIVATE microsim::engine microsim::persist microsim::warnings)
