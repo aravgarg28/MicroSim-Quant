@@ -12,6 +12,7 @@
 /// Independence from `FastBook` is on purpose: different data structures mean a
 /// shared bug would require the same mistake twice in different shapes.
 
+#include <cstdint>
 #include <functional>
 #include <list>
 #include <map>
@@ -103,6 +104,7 @@ class ReferenceBook {
   BidLevels bids_;
   AskLevels asks_;
   std::map<OrderId, Locator> index_;
+  std::uint64_t next_queue_token_{1};  ///< stamped onto each (re)queued order (INV-3)
 };
 
 static_assert(OrderBookLike<ReferenceBook>,

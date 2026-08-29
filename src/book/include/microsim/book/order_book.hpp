@@ -13,6 +13,7 @@
 /// REFERENCE_MODEL.md §"Design constraints").
 
 #include <concepts>
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -29,14 +30,26 @@ using core::Side;
 /// A live order as the book sees it. The book tracks only what price-time
 /// priority needs; the order's original/filled totals live in the registry
 /// (R1-10). `remaining` is the unfilled quantity currently resting.
+///
+/// `queue_token` is a strictly-increasing stamp the book assigns at each (re)queue
+/// (INV-3): within a level, resting orders are ordered by it, which is what makes
+/// FIFO testable even after a modify re-queues an order to the back (R-7.2), where
+/// order_id ordering no longer holds. It is internal book state — never on the
+/// public feed — and is deliberately excluded from equality so two independently
+/// implemented books (the differential check, INV-15) compare on observable
+/// fields and queue *position*, not on a private counter.
 struct RestingOrder {
   OrderId id{};
   ParticipantId participant{};
   Side side{};
   Price price{};
   Qty remaining{};
+  std::uint64_t queue_token{};  ///< assigned by the book on (re)queue; see above
 
-  friend bool operator==(const RestingOrder&, const RestingOrder&) noexcept = default;
+  friend bool operator==(const RestingOrder& a, const RestingOrder& b) noexcept {
+    return a.id == b.id && a.participant == b.participant && a.side == b.side &&
+           a.price == b.price && a.remaining == b.remaining;
+  }
 };
 
 /// One price level of a `BookState` snapshot: the level's price and its orders

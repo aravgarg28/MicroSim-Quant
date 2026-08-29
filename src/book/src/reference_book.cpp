@@ -10,19 +10,24 @@ void ReferenceBook::add(const RestingOrder& order) {
   assert(index_.find(order.id) == index_.end() && "order already resting");
   assert(order.remaining > Qty{0} && "resting order must have positive quantity");
 
+  // The book stamps every (re)queue with a strictly-increasing token (INV-3), so
+  // FIFO within a level is by queue_token even after a modify re-queues an order.
+  RestingOrder resting = order;
+  resting.queue_token = next_queue_token_++;
+
   // R-5.6: the order joins the back of its price level's FIFO queue. A new level
   // is created on first use; the map comparator keeps levels best-price-first.
   std::list<RestingOrder>::iterator it;
-  if (order.side == Side::Buy) {
-    std::list<RestingOrder>& level = bids_[order.price];
-    level.push_back(order);
+  if (resting.side == Side::Buy) {
+    std::list<RestingOrder>& level = bids_[resting.price];
+    level.push_back(resting);
     it = std::prev(level.end());
   } else {
-    std::list<RestingOrder>& level = asks_[order.price];
-    level.push_back(order);
+    std::list<RestingOrder>& level = asks_[resting.price];
+    level.push_back(resting);
     it = std::prev(level.end());
   }
-  index_.emplace(order.id, Locator{order.side, order.price, it});
+  index_.emplace(resting.id, Locator{resting.side, resting.price, it});
 }
 
 void ReferenceBook::reduce(OrderId id, Qty new_remaining) {

@@ -291,6 +291,8 @@ class MatchingEngine {
 
   [[nodiscard]] const core::InstrumentConfig& instrument() const noexcept { return instr_; }
 
+  [[nodiscard]] const Venue& venue() const noexcept { return venue_; }
+
  private:
   /// Build the single OrderRejected for a failed cancel/modify: the target
   /// order_id is set, client_order_id is unset (events.hpp OrderRejected).
