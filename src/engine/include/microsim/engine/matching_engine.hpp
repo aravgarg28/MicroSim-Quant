@@ -55,7 +55,8 @@ class MatchingEngine {
       : venue_(std::move(venue)),
         instr_(std::move(instrument)),
         initial_reference_(initial_reference == core::Price{} ? instr_.min_price
-                                                              : initial_reference) {}
+                                                              : initial_reference),
+        book_(make_book(instr_)) {}
 
   /// Process a NewOrder to completion (R-5.1: atomic, one message at a time),
   /// returning every event it produced, in emission order.
@@ -294,6 +295,18 @@ class MatchingEngine {
   [[nodiscard]] const Venue& venue() const noexcept { return venue_; }
 
  private:
+  /// Construct the book. A book that declares an instrument constructor (FastBook,
+  /// whose tick-indexed array needs the R-1.1 price band) is built from the
+  /// instrument; a band-agnostic book (ReferenceBook) is default-constructed. The
+  /// engine owns the book either way and the concept is unchanged.
+  [[nodiscard]] static Book make_book(const core::InstrumentConfig& instrument) {
+    if constexpr (std::is_constructible_v<Book, const core::InstrumentConfig&>) {
+      return Book(instrument);
+    } else {
+      return Book();
+    }
+  }
+
   /// Build the single OrderRejected for a failed cancel/modify: the target
   /// order_id is set, client_order_id is unset (events.hpp OrderRejected).
   [[nodiscard]] static core::OrderRejected reject_cancel(const core::CancelOrder& m,
