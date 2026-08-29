@@ -9,12 +9,14 @@
 /// boundary is exactly this template plus the book concept.
 ///
 /// Scope: NewOrder — LIMIT and MARKET, fills, NO_LIQUIDITY cancels, and per-fill
-/// fees (R-11.2) (R1-12); cancel (R1-13); modify (R1-14); and pre-trade risk
-/// with a signed position tally (R1-15, R-9). Session end (R1-16) lands in its
-/// own task. Sequencing headers (R-10.2) are the sequencer's job (R1-11); this
-/// returns event payloads in emission order.
+/// fees (R-11.2) (R1-12); cancel (R1-13); modify (R1-14); pre-trade risk with a
+/// signed position tally (R1-15, R-9); and session end (R1-16, R-12). Sequencing
+/// headers (R-10.2) are the sequencer's job (R1-11); this returns event payloads
+/// in emission order.
 
 #include <algorithm>
+#include <cstdint>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -36,19 +38,37 @@ using core::LiquidityFlag;
 using core::Outbound;
 using core::TradeId;
 
+/// Trading state (R-12.1): one session per run, OPEN then CLOSED, never reopened.
+enum class SessionState : std::uint8_t { Open = 0, Closed };
+
 /// A matching engine over one instrument and one book type. Owns the book and
 /// the order registry; validation reference data comes from the Venue.
 template <class Book>
   requires book::OrderBookLike<Book>
 class MatchingEngine {
  public:
-  MatchingEngine(Venue venue, core::InstrumentConfig instrument)
-      : venue_(std::move(venue)), instr_(std::move(instrument)) {}
+  /// `initial_reference` is the R-12.4 mark-price fallback used when the book is
+  /// empty and nothing has traded at session end; it defaults to the instrument's
+  /// minimum price (any in-band value works — it only matters for that fallback).
+  explicit MatchingEngine(Venue venue, core::InstrumentConfig instrument,
+                          core::Price initial_reference = core::Price{})
+      : venue_(std::move(venue)),
+        instr_(std::move(instrument)),
+        initial_reference_(initial_reference == core::Price{} ? instr_.min_price
+                                                              : initial_reference) {}
 
   /// Process a NewOrder to completion (R-5.1: atomic, one message at a time),
   /// returning every event it produced, in emission order.
   std::vector<Outbound> process(const core::NewOrder& m) {
     out_.clear();
+
+    if (state_ == SessionState::Closed) {  // R-12.2
+      out_.push_back(core::OrderRejected{.participant = m.participant,
+                                         .client_order_id = m.client_order_id,
+                                         .order_id = core::OrderId{},
+                                         .reason = core::RejectReason::MarketClosed});
+      return std::move(out_);
+    }
 
     // Gateway: R-3.3 items 1-8, first failure wins. (Risk item 9 is R1-15.)
     if (const auto reason = registry_.validate_new(m, venue_)) {
@@ -104,6 +124,11 @@ class MatchingEngine {
   std::vector<Outbound> process(const core::CancelOrder& m) {
     out_.clear();
 
+    if (state_ == SessionState::Closed) {  // R-12.2
+      out_.push_back(reject_cancel(m, core::RejectReason::MarketClosed));
+      return std::move(out_);
+    }
+
     OrderRecord* o = registry_.lookup(m.order_id);
     if (o == nullptr) {
       out_.push_back(reject_cancel(m, core::RejectReason::UnknownOrder));  // R-6.3
@@ -138,6 +163,11 @@ class MatchingEngine {
   /// (R-7.5).
   std::vector<Outbound> process(const core::ModifyOrder& m) {
     out_.clear();
+
+    if (state_ == SessionState::Closed) {  // R-12.2
+      out_.push_back(reject_modify(m, core::RejectReason::MarketClosed));
+      return std::move(out_);
+    }
 
     OrderRecord* o = registry_.lookup(m.order_id);
     if (o == nullptr) {
@@ -204,22 +234,42 @@ class MatchingEngine {
     return std::move(out_);
   }
 
+  /// Close the session (R-12.3): compute the session-end mark price from the book
+  /// as it stands, then cancel every resting order in canonical order — bids
+  /// best-to-worst, then asks best-to-worst, FIFO within a level — emitting an
+  /// OrderCanceled(SESSION_END) for each, and move to CLOSED. Idempotent: a second
+  /// SessionEnd does nothing.
+  std::vector<Outbound> process(const core::SessionEnd&) {
+    out_.clear();
+    if (state_ == SessionState::Closed) {
+      return std::move(out_);
+    }
+
+    // R-12.4: the mark is read from the book before any orders are removed.
+    mark_half_ticks_ = compute_mark_half_ticks();
+
+    // dump_state() yields exactly the R-12.3 order (best-to-worst, FIFO), so the
+    // cancel sequence is deterministic and testable.
+    const book::BookState snap = book_.dump_state();
+    for (const auto& level : snap.bids) {
+      for (const auto& resting : level.orders) {
+        emit_session_cancel(resting);
+      }
+    }
+    for (const auto& level : snap.asks) {
+      for (const auto& resting : level.orders) {
+        emit_session_cancel(resting);
+      }
+    }
+    book_.clear();
+    state_ = SessionState::Closed;
+    return std::move(out_);
+  }
+
   /// Dispatch any inbound message to its handler (MATCHING_ENGINE_SPEC top-level
-  /// dispatch). Session end (R1-16) is not yet implemented and produces no
-  /// events.
+  /// dispatch).
   std::vector<Outbound> process(const core::Inbound& msg) {
-    return std::visit(
-        [this](const auto& m) -> std::vector<Outbound> {
-          using T = std::decay_t<decltype(m)>;
-          if constexpr (std::is_same_v<T, core::NewOrder> || std::is_same_v<T, core::CancelOrder> ||
-                        std::is_same_v<T, core::ModifyOrder>) {
-            return process(m);
-          } else {
-            out_.clear();  // SessionEnd (R1-16): TODO
-            return std::move(out_);
-          }
-        },
-        msg);
+    return std::visit([this](const auto& m) -> std::vector<Outbound> { return process(m); }, msg);
   }
 
   // ----- read-only views for the CLI, tests, and (later) MD --------------------
@@ -229,6 +279,14 @@ class MatchingEngine {
   [[nodiscard]] const OrderRegistry& registry() const noexcept { return registry_; }
 
   [[nodiscard]] const RiskEngine& risk() const noexcept { return risk_; }
+
+  [[nodiscard]] SessionState session_state() const noexcept { return state_; }
+
+  /// The session-end mark price in half-ticks (R-12.4, `mark_ht = 2 × mid`).
+  /// Valid only after the session has closed; 0 while OPEN. Kept in half-ticks
+  /// because a two-sided mid can fall on a half-tick (POSITION_AND_PNL.md); full
+  /// P&L marking off this hook is accounting (E11).
+  [[nodiscard]] std::int64_t mark_half_ticks() const noexcept { return mark_half_ticks_; }
 
   [[nodiscard]] const core::InstrumentConfig& instrument() const noexcept { return instr_; }
 
@@ -261,6 +319,29 @@ class MatchingEngine {
                                .participant = o.participant,
                                .new_qty = m.new_qty,
                                .new_price = m.new_price};
+  }
+
+  /// Emit the SESSION_END cancel for one resting order and finalize it (R-12.3).
+  void emit_session_cancel(const book::RestingOrder& resting) {
+    out_.push_back(core::OrderCanceled{.order_id = resting.id,
+                                       .participant = resting.participant,
+                                       .remaining_qty = resting.remaining,
+                                       .reason = core::CancelReason::SessionEnd});
+    registry_.finalize(resting.id, OrderState::Canceled);
+  }
+
+  /// R-12.4 mark price in half-ticks: 2×mid if both sides are non-empty, else
+  /// 2×last-trade price, else 2×the configured initial reference.
+  [[nodiscard]] std::int64_t compute_mark_half_ticks() const {
+    const auto bid = book_.best(core::Side::Buy);
+    const auto ask = book_.best(core::Side::Sell);
+    if (bid && ask) {
+      return bid->ticks() + ask->ticks();  // = 2 × mid
+    }
+    if (last_trade_price_) {
+      return 2 * last_trade_price_->ticks();
+    }
+    return 2 * initial_reference_.ticks();
   }
 
   /// R-5.3/5.4: while the taker has quantity and is marketable, trade the front
@@ -306,6 +387,7 @@ class MatchingEngine {
                      core::Price px, core::Qty q) {
     const TradeId trade_id = next_trade_id_;
     next_trade_id_ = next_trade_id_.next();
+    last_trade_price_ = px;  // R-12.4 mark fallback
 
     registry_.apply_fill(maker_id, q);
     registry_.apply_fill(taker.id, q);
@@ -345,10 +427,14 @@ class MatchingEngine {
 
   Venue venue_;
   core::InstrumentConfig instr_;
+  core::Price initial_reference_;  ///< R-12.4 mark fallback (see constructor)
   Book book_;
   OrderRegistry registry_;
   RiskEngine risk_;
   TradeId next_trade_id_{TradeId::first()};
+  SessionState state_{SessionState::Open};       ///< R-12.1
+  std::optional<core::Price> last_trade_price_;  ///< R-12.4 mark fallback
+  std::int64_t mark_half_ticks_{0};              ///< R-12.4, set at close
   std::vector<Outbound> out_;
 };
 

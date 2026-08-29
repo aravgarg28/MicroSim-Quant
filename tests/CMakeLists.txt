@@ -68,7 +68,7 @@ microsim_add_test(persist unit/persist/test_link_persist.cpp)
 microsim_add_test(engine unit/engine/test_link_engine.cpp unit/engine/test_order_registry.cpp
                   unit/engine/test_matching_engine.cpp unit/engine/test_cancel.cpp
                   unit/engine/test_modify.cpp unit/engine/test_risk.cpp
-                  unit/engine/test_sequencer.cpp)
+                  unit/engine/test_session_end.cpp unit/engine/test_sequencer.cpp)
 microsim_add_test(agents unit/agents/test_link_agents.cpp)
 microsim_add_test(strategy unit/strategy/test_link_strategy.cpp)
 microsim_add_test(metrics unit/metrics/test_link_metrics.cpp)
