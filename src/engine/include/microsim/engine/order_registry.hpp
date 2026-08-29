@@ -98,6 +98,15 @@ class OrderRegistry {
   /// Count of orders ever created (order_ids are dense from 1).
   [[nodiscard]] std::size_t size() const noexcept { return orders_.size(); }
 
+  /// Number of a participant's orders currently Live (resting or in-flight),
+  /// for the open-order risk limit (R-9.1). Iterates the order map, but the
+  /// result is a count and so is independent of iteration order (R-10.3).
+  [[nodiscard]] std::int64_t open_order_count(ParticipantId participant) const;
+
+  /// Sum of the remaining lots of a participant's Live orders on one side, for
+  /// the worst-case position risk limit (R-9.3). Order-independent sum (R-10.3).
+  [[nodiscard]] std::int64_t same_side_open_qty(ParticipantId participant, Side side) const;
+
  private:
   OrderId next_id_{OrderId::first()};
   std::unordered_map<OrderId, OrderRecord> orders_;

@@ -85,6 +85,26 @@ OrderId OrderRegistry::create(const core::NewOrder& m) {
   return id;
 }
 
+std::int64_t OrderRegistry::open_order_count(ParticipantId participant) const {
+  std::int64_t n = 0;
+  for (const auto& [id, rec] : orders_) {
+    if (rec.participant == participant && rec.state == OrderState::Live) {
+      ++n;
+    }
+  }
+  return n;
+}
+
+std::int64_t OrderRegistry::same_side_open_qty(ParticipantId participant, Side side) const {
+  std::int64_t sum = 0;
+  for (const auto& [id, rec] : orders_) {
+    if (rec.participant == participant && rec.state == OrderState::Live && rec.side == side) {
+      sum += rec.remaining().lots();
+    }
+  }
+  return sum;
+}
+
 OrderRecord* OrderRegistry::lookup(OrderId id) {
   auto it = orders_.find(id);
   return it == orders_.end() ? nullptr : &it->second;

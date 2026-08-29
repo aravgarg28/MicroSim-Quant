@@ -9,9 +9,10 @@
 /// boundary is exactly this template plus the book concept.
 ///
 /// Scope: NewOrder — LIMIT and MARKET, fills, NO_LIQUIDITY cancels, and per-fill
-/// fees (R-11.2) (R1-12); cancel (R1-13); and modify (R1-14). Risk (R1-15) and
-/// session end (R1-16) land in their own tasks. Sequencing headers (R-10.2) are
-/// the sequencer's job (R1-11); this returns event payloads in emission order.
+/// fees (R-11.2) (R1-12); cancel (R1-13); modify (R1-14); and pre-trade risk
+/// with a signed position tally (R1-15, R-9). Session end (R1-16) lands in its
+/// own task. Sequencing headers (R-10.2) are the sequencer's job (R1-11); this
+/// returns event payloads in emission order.
 
 #include <algorithm>
 #include <type_traits>
@@ -25,6 +26,7 @@
 #include "microsim/core/messages.hpp"
 #include "microsim/core/types.hpp"
 #include "microsim/engine/order_registry.hpp"
+#include "microsim/engine/risk.hpp"
 #include "microsim/engine/venue.hpp"
 
 namespace microsim::engine {
@@ -50,6 +52,17 @@ class MatchingEngine {
 
     // Gateway: R-3.3 items 1-8, first failure wins. (Risk item 9 is R1-15.)
     if (const auto reason = registry_.validate_new(m, venue_)) {
+      out_.push_back(core::OrderRejected{.participant = m.participant,
+                                         .client_order_id = m.client_order_id,
+                                         .order_id = core::OrderId{},
+                                         .reason = *reason});
+      return std::move(out_);
+    }
+
+    // Risk (R-3.3 item 9 / R-9): open-order slots, participant size cap, and the
+    // worst-case position limit. Participant is registered (validate_new item 2).
+    const core::ParticipantRisk& limits = venue_.find_participant(m.participant)->risk;
+    if (const auto reason = risk_.check_new(m, limits, registry_)) {
       out_.push_back(core::OrderRejected{.participant = m.participant,
                                          .client_order_id = m.client_order_id,
                                          .order_id = core::OrderId{},
@@ -143,7 +156,13 @@ class MatchingEngine {
       out_.push_back(reject_modify(m, *reason));  // R-7.1 bands
       return std::move(out_);
     }
-    // (Risk check_modify is R-9.5, task R1-15.)
+    // R-9.5: re-run risk on the delta; a failure leaves the order untouched (we
+    // have not mutated anything yet). Owner is registered (checked at NewOrder).
+    const core::ParticipantRisk& limits = venue_.find_participant(m.participant)->risk;
+    if (const auto reason = risk_.check_modify(*o, m, limits, registry_)) {
+      out_.push_back(reject_modify(m, *reason));
+      return std::move(out_);
+    }
 
     // R-7.3: a new total at or below the already-filled quantity cancels the
     // remainder. The single OrderModified still precedes the cancel (R-7.5).
@@ -208,6 +227,8 @@ class MatchingEngine {
   [[nodiscard]] const Book& book() const noexcept { return book_; }
 
   [[nodiscard]] const OrderRegistry& registry() const noexcept { return registry_; }
+
+  [[nodiscard]] const RiskEngine& risk() const noexcept { return risk_; }
 
   [[nodiscard]] const core::InstrumentConfig& instrument() const noexcept { return instr_; }
 
@@ -289,6 +310,10 @@ class MatchingEngine {
     registry_.apply_fill(maker_id, q);
     registry_.apply_fill(taker.id, q);
 
+    // R-9 position tally: the maker rests on the side opposite the aggressor.
+    risk_.on_fill(maker_party, core::opposite(taker.side), q);
+    risk_.on_fill(taker.participant, taker.side, q);
+
     // R-11.2: taker pays qty * taker_fee (positive cost); maker receives
     // qty * maker_rebate (negative cost — a credit).
     const Cash taker_fee{q.lots() * instr_.fees.taker_fee_per_lot.minor()};
@@ -322,6 +347,7 @@ class MatchingEngine {
   core::InstrumentConfig instr_;
   Book book_;
   OrderRegistry registry_;
+  RiskEngine risk_;
   TradeId next_trade_id_{TradeId::first()};
   std::vector<Outbound> out_;
 };
