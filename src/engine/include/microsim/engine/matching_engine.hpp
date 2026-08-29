@@ -8,8 +8,8 @@
 /// ReferenceBook (the oracle) now and FastBook (R1-19) later — the differential
 /// boundary is exactly this template plus the book concept.
 ///
-/// Scope (R1-12): NewOrder — LIMIT and MARKET, fills, NO_LIQUIDITY cancels, and
-/// per-fill fees (R-11.2). Cancel (R1-13), modify (R1-14), risk (R1-15), and
+/// Scope: NewOrder — LIMIT and MARKET, fills, NO_LIQUIDITY cancels, and per-fill
+/// fees (R-11.2) (R1-12); cancel (R1-13); and modify (R1-14). Risk (R1-15) and
 /// session end (R1-16) land in their own tasks. Sequencing headers (R-10.2) are
 /// the sequencer's job (R1-11); this returns event payloads in emission order.
 
@@ -117,17 +117,86 @@ class MatchingEngine {
     return std::move(out_);
   }
 
+  /// Modify a resting order (R-7). Same ownership/terminal gate as cancel, then
+  /// R-7.1 band validation; a new total at or below what already filled cancels
+  /// the remainder (R-7.3); otherwise a same-price quantity decrease keeps queue
+  /// priority (R-7.2) while a price change or quantity increase re-queues and may
+  /// execute immediately (R-7.4). Exactly one OrderModified precedes any fills
+  /// (R-7.5).
+  std::vector<Outbound> process(const core::ModifyOrder& m) {
+    out_.clear();
+
+    OrderRecord* o = registry_.lookup(m.order_id);
+    if (o == nullptr) {
+      out_.push_back(reject_modify(m, core::RejectReason::UnknownOrder));  // R-6.3
+      return std::move(out_);
+    }
+    if (o->participant != m.participant) {
+      out_.push_back(reject_modify(m, core::RejectReason::NotOrderOwner));  // R-6.1
+      return std::move(out_);
+    }
+    if (o->terminal()) {
+      out_.push_back(reject_modify(m, core::RejectReason::TooLateToModify));  // R-6.3
+      return std::move(out_);
+    }
+    if (const auto reason = registry_.validate_modify(m, instr_)) {
+      out_.push_back(reject_modify(m, *reason));  // R-7.1 bands
+      return std::move(out_);
+    }
+    // (Risk check_modify is R-9.5, task R1-15.)
+
+    // R-7.3: a new total at or below the already-filled quantity cancels the
+    // remainder. The single OrderModified still precedes the cancel (R-7.5).
+    if (m.new_qty <= o->filled_qty) {
+      const core::Qty remaining = o->remaining();
+      book_.remove(m.order_id);
+      out_.push_back(modified_event(m, *o));
+      out_.push_back(core::OrderCanceled{.order_id = m.order_id,
+                                         .participant = o->participant,
+                                         .remaining_qty = remaining,
+                                         .reason = core::CancelReason::ModifyToDone});
+      registry_.finalize(m.order_id, OrderState::Canceled);
+      return std::move(out_);
+    }
+
+    // R-7.2: keep the queue position only on a same-price quantity decrease; a
+    // price change or a quantity increase loses time priority.
+    const bool keep_priority = (m.new_price == o->price) && (m.new_qty < o->total_qty);
+
+    registry_.modify(m.order_id, m.new_qty, m.new_price);  // sets total_qty + price
+    out_.push_back(modified_event(m, *o));                 // R-7.5: one event, before fills
+
+    if (keep_priority) {
+      book_.reduce(m.order_id, o->remaining());  // shrink in place, priority kept
+    } else {
+      // Atomic cancel + fresh arrival at the new price (R-7.2): out of the book,
+      // match if now marketable (R-7.4), then rest any remainder at the back.
+      book_.remove(m.order_id);
+      match_loop(m.order_id);
+      if (o->remaining() > core::Qty{0}) {
+        book_.add(book::RestingOrder{.id = m.order_id,
+                                     .participant = o->participant,
+                                     .side = o->side,
+                                     .price = o->price,
+                                     .remaining = o->remaining()});
+      }
+      // Fully filled by the immediate match: apply_fill already set FILLED.
+    }
+    return std::move(out_);
+  }
+
   /// Dispatch any inbound message to its handler (MATCHING_ENGINE_SPEC top-level
-  /// dispatch). Modify (R1-14) and session end (R1-16) are not yet implemented
-  /// and currently produce no events.
+  /// dispatch). Session end (R1-16) is not yet implemented and produces no
+  /// events.
   std::vector<Outbound> process(const core::Inbound& msg) {
     return std::visit(
         [this](const auto& m) -> std::vector<Outbound> {
           using T = std::decay_t<decltype(m)>;
-          if constexpr (std::is_same_v<T, core::NewOrder> || std::is_same_v<T, core::CancelOrder>) {
+          if constexpr (std::is_same_v<T, core::NewOrder> || std::is_same_v<T, core::CancelOrder> ||
+                        std::is_same_v<T, core::ModifyOrder>) {
             return process(m);
           } else {
-            out_.clear();  // ModifyOrder (R1-14), SessionEnd (R1-16): TODO
+            out_.clear();  // SessionEnd (R1-16): TODO
             return std::move(out_);
           }
         },
@@ -151,6 +220,26 @@ class MatchingEngine {
                                .client_order_id = core::ClientOrderId{},
                                .order_id = m.order_id,
                                .reason = reason};
+  }
+
+  /// The single OrderRejected for a failed modify: same shape as a failed cancel
+  /// (order_id set, client_order_id unset).
+  [[nodiscard]] static core::OrderRejected reject_modify(const core::ModifyOrder& m,
+                                                         core::RejectReason reason) {
+    return core::OrderRejected{.participant = m.participant,
+                               .client_order_id = core::ClientOrderId{},
+                               .order_id = m.order_id,
+                               .reason = reason};
+  }
+
+  /// The OrderModified acknowledging a successful modify (R-7.5): carries the new
+  /// total quantity and price the request asked for.
+  [[nodiscard]] static core::OrderModified modified_event(const core::ModifyOrder& m,
+                                                          const OrderRecord& o) {
+    return core::OrderModified{.order_id = m.order_id,
+                               .participant = o.participant,
+                               .new_qty = m.new_qty,
+                               .new_price = m.new_price};
   }
 
   /// R-5.3/5.4: while the taker has quantity and is marketable, trade the front

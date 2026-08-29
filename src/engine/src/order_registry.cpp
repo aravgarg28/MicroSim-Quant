@@ -51,6 +51,22 @@ std::optional<RejectReason> OrderRegistry::validate_new(const core::NewOrder& m,
   return std::nullopt;
 }
 
+std::optional<RejectReason> OrderRegistry::validate_modify(
+    const core::ModifyOrder& m, const core::InstrumentConfig& instr) const {
+  // R-7.1: the new total quantity and price must pass the same bands a new order
+  // does (R-3.3 items 5–7), first failure wins.
+  if (m.new_qty < Qty{1}) {
+    return RejectReason::InvalidQty;  // item 5
+  }
+  if (m.new_qty > instr.max_order_qty) {
+    return RejectReason::OrderTooLarge;  // item 6
+  }
+  if (m.new_price < instr.min_price || m.new_price > instr.max_price) {
+    return RejectReason::PriceOutOfBands;  // item 7
+  }
+  return std::nullopt;
+}
+
 OrderId OrderRegistry::create(const core::NewOrder& m) {
   const OrderId id = next_id_;
   next_id_ = next_id_.next();  // R-4.1: strictly increasing in arrival order
@@ -88,6 +104,15 @@ void OrderRegistry::apply_fill(OrderId id, Qty q) {
   if (rec->remaining() == Qty{0}) {
     rec->state = OrderState::Filled;  // R-4.3 implicit FILLED terminal
   }
+}
+
+void OrderRegistry::modify(OrderId id, Qty new_total_qty, Price new_price) {
+  OrderRecord* rec = lookup(id);
+  assert(rec != nullptr && "modify of an unknown order");
+  assert(rec->state == OrderState::Live && "modify on a terminal order (INV-7)");
+  assert(new_total_qty > rec->filled_qty && "modify-to-done must be handled by the caller (R-7.3)");
+  rec->total_qty = new_total_qty;
+  rec->price = new_price;
 }
 
 void OrderRegistry::finalize(OrderId id, OrderState terminal) {

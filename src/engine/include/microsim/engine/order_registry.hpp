@@ -65,6 +65,14 @@ class OrderRegistry {
   [[nodiscard]] std::optional<RejectReason> validate_new(const core::NewOrder& m,
                                                          const Venue& venue) const;
 
+  /// Validate a ModifyOrder's new quantity and price per R-7.1 (R-3.3 items 5–7
+  /// semantics), first failure wins. Ownership (R-6.1) and terminal-state
+  /// (R-6.3) checks run in the engine, against the order record, before this.
+  /// Every modifiable order is a resting LIMIT order, so the price band always
+  /// applies. Risk (R-9.5) is a later stage (R1-15).
+  [[nodiscard]] std::optional<RejectReason> validate_modify(
+      const core::ModifyOrder& m, const core::InstrumentConfig& instr) const;
+
   /// Assign the next order_id (R-4.1), record the client-order-id as used, and
   /// create a Live record. Precondition: validation (and, later, risk) passed.
   OrderId create(const core::NewOrder& m);
@@ -75,6 +83,12 @@ class OrderRegistry {
   /// Apply `q` lots of fill to an order (R-4.3): accumulates filled quantity and
   /// flips the order to the absorbing FILLED state when nothing remains.
   void apply_fill(OrderId id, Qty q);
+
+  /// Apply an accepted modify (R-7) to a Live order: set its new total quantity
+  /// and limit price (remaining is derived, total − filled). Preconditions: the
+  /// order is Live and `new_total_qty > filled_qty` — modify-to-done (R-7.3) is
+  /// resolved by the caller before this.
+  void modify(OrderId id, Qty new_total_qty, Price new_price);
 
   /// Move a Live order to an absorbing terminal state (CANCELED by request /
   /// no-liquidity / session-end / modify-to-done; FILLED is normally reached via
