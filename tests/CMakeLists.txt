@@ -101,3 +101,15 @@ gtest_discover_tests(test_differential DISCOVERY_MODE PRE_TEST)
 add_test(NAME app.microsim_run.smoke COMMAND microsim_run)
 set_tests_properties(app.microsim_run.smoke
                      PROPERTIES PASS_REGULAR_EXPRESSION "4 trades, 80 lots matched")
+
+# Benchmark-comparator unit tests (R1-23): pure Python over fixture JSONs, run
+# under the normal test build (the bench preset builds no tests). Skipped with a
+# message when no Python interpreter is available.
+find_program(MICROSIM_PYTHON3 NAMES python3 python)
+if(MICROSIM_PYTHON3)
+  add_test(NAME scripts.bench_compare
+           COMMAND ${MICROSIM_PYTHON3} -m unittest discover
+                   -s ${CMAKE_SOURCE_DIR}/tests/bench -p "test_*.py")
+else()
+  message(STATUS "python3 not found: skipping the bench_compare.py unit tests")
+endif()

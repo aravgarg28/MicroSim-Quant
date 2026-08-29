@@ -1,0 +1,33 @@
+{
+  "context": {"executable": "bm_book"},
+  "benchmarks": [
+    {
+      "run_name": "book_insert/1000/0/manual_time",
+      "run_type": "aggregate",
+      "aggregate_name": "median",
+      "real_time": 108.0,
+      "time_unit": "ns",
+      "allocs/op": 1.0
+    },
+    {
+      "run_name": "book_insert/1000/0/manual_time",
+      "run_type": "aggregate",
+      "aggregate_name": "cv",
+      "real_time": 0.10
+    },
+    {
+      "run_name": "book_cancel/1000/0/manual_time",
+      "run_type": "aggregate",
+      "aggregate_name": "median",
+      "real_time": 50.0,
+      "time_unit": "ns",
+      "allocs/op": 0.0
+    },
+    {
+      "run_name": "book_cancel/1000/0/manual_time",
+      "run_type": "aggregate",
+      "aggregate_name": "cv",
+      "real_time": 0.02
+    }
+  ]
+}
