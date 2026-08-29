@@ -269,7 +269,8 @@ class MatchingEngine {
   /// Dispatch any inbound message to its handler (MATCHING_ENGINE_SPEC top-level
   /// dispatch).
   std::vector<Outbound> process(const core::Inbound& msg) {
-    return std::visit([this](const auto& m) -> std::vector<Outbound> { return process(m); }, msg);
+    return std::visit([this](const auto& m) -> std::vector<Outbound> { return this->process(m); },
+                      msg);
   }
 
   // ----- read-only views for the CLI, tests, and (later) MD --------------------
