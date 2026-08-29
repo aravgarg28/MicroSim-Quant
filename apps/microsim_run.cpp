@@ -98,6 +98,8 @@ int main(int argc, char** argv) {
   if (out_dir) {
     std::cout << "  logs: " << (*out_dir / "input.log").string() << ", "
               << (*out_dir / "events.log").string() << "\n";
+    std::cout << "  replay: microsim_replay " << (*out_dir / "input.log").string() << " "
+              << (*out_dir / "events.log").string() << "\n";
   }
   return 0;
 }
